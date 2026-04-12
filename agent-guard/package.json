@@ -1,0 +1,21 @@
+{
+  "name": "agent-guard",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "agent",
+    "services/*",
+    "dashboard"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev --workspace=backend",
+    "services-a:dev": "npm run dev --workspace=services/service-a",
+    "services-b:dev": "npm run dev --workspace=services/service-b",
+    "agent:dev": "npm run dev --workspace=agent",
+    "dashboard:dev": "npm run dev --workspace=dashboard",
+    "dev": "concurrently \"npm run backend:dev\" \"npm run services-a:dev\" \"npm run services-b:dev\" \"npm run agent:dev\" \"npm run dashboard:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Aegis — Intent-Level Authorization for AI Agent Payments</title>
+  <meta name="description" content="Aegis combines real-time intent inspection with on-chain policy enforcement on Stellar Soroban. Every AI agent payment is verified, governed, and fully auditable." />
+  <meta property="og:title" content="Aegis — Intent-Level Authorization for AI Agent Payments" />
+  <meta property="og:description" content="Real-time intent inspection + on-chain policy enforcement on Stellar. Every AI agent payment verified before a single stroop moves." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Inter — Stripe's closest open-source equivalent -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300..900;1,14..32,300..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+  <style>
+    /* ═══════════════════════════════════════════
+       AEGIS — Light mode (Stripe-style)
+    ═══════════════════════════════════════════ */
+    :root {
+      /* Stripe's exact color vocabulary */
+      --bg:            #ffffff;
+      --bg-quiet:      #f6f9fc;
+      --bg-dark:       #0a2540;     /* Stripe's dark navy for hero gradient */
+      --bg-card:       #f6f9fc;
+      --border:        #e0e6ed;
+      --border-dark:   #c3cfe0;
+
+      --text-solid:    #0a2540;     /* Stripe --hds-color-text-solid */
+      --text-sub:      #425466;     /* Stripe body text */
+      --text-quiet:    #8898aa;     /* Stripe muted */
+      --text-label:    #6b7c93;
+
+      /* Accent — Stripe's signature purple-indigo */
+      --accent:        #635bff;
+      --accent-dark:   #4f46e5;
+      --accent-light:  #f0effe;
+      --accent-border: rgba(99,91,255,0.25);
+
+      /* Stripe's wave gradient */
+      --wave-1: #6772e5;
+      --wave-2: #9c6fe4;
+      --wave-3: #cf4f7d;
+
+      /* Type */
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+
+      --container: 1280px;
+      --radius: 8px;
+      --radius-lg: 14px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-solid);
+      overflow-x: hidden;
+      line-height: 1.6;
+      font-size: 1rem;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+      line-height: 1; vertical-align: middle; display: inline-block;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: var(--container); margin: 0 auto; padding: 0 2rem; }
+
+    /* ════════════════════════════════════
+       ANNOUNCEMENT BANNER
+    ════════════════════════════════════ */
+    .announcement {
+      background: var(--bg-dark);
+      color: rgba(255,255,255,0.9);
+      padding: 0.625rem 1rem;
+      text-align: center;
+      font-size: 0.8125rem;
+      letter-spacing: 0;
+    }
+    .announcement a {
+      color: #fff;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      margin-left: 0.5rem;
+    }
+
+    /* ════════════════════════════════════
+       NAVIGATION — Stripe light style
+    ════════════════════════════════════ */
+    .nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow 0.25s;
+    }
+    .nav.scrolled { box-shadow: 0 2px 16px rgba(10,37,64,0.08); }
+
+    .nav__layout {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      height: 64px; gap: 1.5rem;
+    }
+
+    /* Logo — wordmark only, no icon */
+    .nav__logo {
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 1.1875rem;
+      letter-spacing: -0.035em;
+      color: var(--text-solid);
+      flex-shrink: 0;
+    }
+
+    .nav__list {
+      list-style: none;
+      display: flex; align-items: center; gap: 0;
+    }
+    .nav__list a {
+      display: block;
+      padding: 0.5rem 0.875rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-sub);
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+    }
+    .nav__list a:hover { color: var(--text-solid); background: var(--bg-quiet); }
+
+    .nav__cta-group { display: flex; align-items: center; gap: 0.5rem; }
+
+    /* Stripe "Sign in" button style */
+    .btn-nav-ghost {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem; font-weight: 500;
+      color: var(--text-sub);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: var(--font);
+    }
+    .btn-nav-ghost:hover { color: var(--text-solid); border-color: var(--border-dark); }
+
+    /* Stripe primary nav button */
+    .btn-nav-primary {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem; font-weight: 600;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px; border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-nav-primary:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99,91,255,0.35);
+    }
+
+    /* Stripe hover arrow */
+    .icon-arrow {
+      display: inline-flex;
+      transition: transform 0.2s;
+    }
+    .btn-nav-primary:hover .icon-arrow { transform: translateX(2px); }
+
+    /* ════════════════════════════════════
+       HERO — Stripe white section with gradient wave
+    ════════════════════════════════════ */
+    .hero {
+      position: relative;
+      padding: 9rem 0 7rem;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    /* Stripe's subtle fullbleed lines */
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Stripe wave gradient — right side */
+    .hero__wave {
+      position: absolute;
+      top: 0; right: 0; bottom: 0;
+      width: 55%;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .hero__wave svg { width: 100%; height: 100%; }
+
+    .hero__layout { position: relative; z-index: 1; max-width: 720px; }
+
+    /* Stripe eyebrow (their "Global GDP" live stat style) */
+    .hero__eyebrow {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      font-family: var(--mono);
+      font-size: 0.6875rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-quiet);
+      margin-bottom: 1.25rem;
+    }
+    .hero__eyebrow-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #22c55e;
+      animation: blink 2.4s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* Stripe hero h1 — em for gradient text */
+    .hero__title {
+      font-size: clamp(2.6rem, 5vw, 4.25rem);
+      font-weight: 800;
+      line-height: 1.07;
+      letter-spacing: -0.045em;
+      color: var(--text-solid);
+      margin-bottom: 1.5rem;
+    }
+    .hero__title em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--wave-1) 0%, var(--wave-3) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stripe hero copy — no letter-spacing, generous line-height */
+    .hero__copy {
+      display: block;
+      font-size: 1.125rem;
+      font-weight: 400;
+      line-height: 1.75;
+      letter-spacing: 0;              /* ← fixed: no letter-spacing */
+      color: var(--text-sub);
+      margin-bottom: 2.25rem;
+      max-width: 560px;
+    }
+
+    /* ── Buttons ── */
+    .btn-group { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.8125rem 1.625rem;
+      font-family: var(--font);
+      font-size: 0.9375rem; font-weight: 600;
+      background: var(--accent); color: #fff;
+      border-radius: var(--radius); border: none; cursor: pointer;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-primary:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(99,91,255,0.3);
+    }
+    .btn-primary .material-symbols-outlined { font-size: 18px; transition: transform 0.2s; }
+    .btn-primary:hover .material-symbols-outlined { transform: translateX(3px); }
+
+    /* Stripe secondary — transparent outline */
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.8125rem 1.625rem;
+      font-family: var(--font);
+      font-size: 0.9375rem; font-weight: 500;
+      background: transparent;
+      color: var(--text-sub);
+      border: 1px solid var(--border-dark);
+      border-radius: var(--radius); cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-outline:hover { color: var(--text-solid); border-color: var(--text-label); }
+
+    /* ════════════════════════════════════
+       "BUILT ON" STRIP — truthful tech stack
+    ════════════════════════════════════ */
+    .built-on {
+      background: var(--bg-quiet);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 0;
+    }
+    .built-on__label {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-quiet);
+      margin-bottom: 1.5rem;
+    }
+
+    .tech-list {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 2rem 3.5rem;
+    }
+
+    .tech-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.9375rem; font-weight: 600;
+      color: var(--text-label);
+      letter-spacing: -0.01em;
+      transition: color 0.2s;
+    }
+    .tech-item:hover { color: var(--text-solid); }
+    .tech-item .material-symbols-outlined { font-size: 20px; color: var(--text-quiet); }
+
+    /* ════════════════════════════════════
+       SECTION system
+    ════════════════════════════════════ */
+    .section { padding: 5.5rem 0; }
+    .section--quiet { background: var(--bg-quiet); }
+
+    /* Stripe's border divider style */
+    .section--bordered {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section__header {
+      display: flex; flex-direction: column;
+      align-items: center;
+      text-align: center;
+      max-width: 46rem;
+      margin: 0 auto 3.5rem;
+    }
+
+    /* Scale AI: monospace uppercase label */
+    .section__overtitle {
+      font-family: var(--mono);
+      font-size: 0.6875rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-quiet);
+      margin-bottom: 1rem;
+    }
+
+    /* Scale AI: large display heading */
+    .section__title {
+      font-size: clamp(1.875rem, 3vw, 2.75rem);
+      font-weight: 750;
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+      color: var(--text-solid);
+    }
+
+    .section__desc {
+      margin-top: 0.875rem;
+      font-size: 1.0625rem;
+      line-height: 1.7;
+      color: var(--text-sub);
+    }
+
+    /* ── Feature grid ── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--bg);
+      padding: 2.25rem 1.875rem;
+      transition: background 0.2s;
+    }
+    .feature-card:hover { background: var(--bg-quiet); }
+
+    .feature-card__icon {
+      font-size: 26px;
+      color: var(--accent);
+      margin-bottom: 0.875rem;
+      display: block;
+    }
+
+    .feature-card__title {
+      font-size: 1rem;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      color: var(--text-solid);
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card__body {
+      font-size: 0.9rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+    }
+
+    /* ── How It Works ── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5rem; align-items: start;
+    }
+
+    .tab { padding: 1.375rem 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .tab:first-child { border-top: 1px solid var(--border); }
+    .tab:not(.tab--active) { opacity: 0.45; }
+    .tab--active { opacity: 1; }
+
+    .tab__header { display: flex; gap: 1rem; align-items: baseline; }
+
+    .tab__num {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-quiet);
+      min-width: 1.5rem;
+    }
+    .tab__title {
+      font-size: 0.9375rem;
+      font-weight: 650;
+      color: var(--text-solid);
+      margin-bottom: 0.375rem;
+      letter-spacing: -0.01em;
+    }
+    .tab__body {
+      font-size: 0.875rem;
+      color: var(--text-sub);
+      line-height: 1.65;
+      padding-left: 2.5rem;
+    }
+
+    /* Code window */
+    .code-window {
+      background: var(--bg-dark);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(10,37,64,0.18);
+      position: sticky; top: 5.5rem;
+    }
+    .code-window__bar {
+      display: flex; align-items: center; gap: 0.5rem;
+      padding: 0.75rem 1.125rem;
+      background: rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    .code-window__dot { width: 10px; height: 10px; border-radius: 50%; }
+    .code-window__dot--red    { background: #ff5f57; }
+    .code-window__dot--yellow { background: #ffbd2e; }
+    .code-window__dot--green  { background: #28c840; }
+    .code-window__file {
+      margin-left: 0.5rem;
+      font-family: var(--mono); font-size: 0.75rem;
+      color: rgba(255,255,255,0.35);
+    }
+    .code-window__body {
+      padding: 1.625rem 1.5rem;
+      font-family: var(--mono); font-size: 0.8125rem;
+      line-height: 1.9; overflow-x: auto;
+      color: rgba(255,255,255,0.75);
+    }
+    .tok-comment { color: rgba(255,255,255,0.28); font-style: italic; }
+    .tok-key  { color: #79b8ff; }
+    .tok-str  { color: #85e89d; }
+    .tok-num  { color: #f8c555; }
+    .tok-ok   { color: #85e89d; }
+    .tok-dim  { color: rgba(255,255,255,0.45); }
+    .tok-label { color: #f97583; }
+
+    /* ── Quotes ── */
+    .quotes-grid {
+      display: grid; grid-template-columns: repeat(2,1fr);
+      gap: 1.5rem;
+    }
+
+    .quote-card {
+      background: var(--bg-quiet);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.875rem;
+    }
+
+    .quote-card__tag {
+      font-family: var(--mono); font-size: 0.6875rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-quiet); margin-bottom: 1rem;
+    }
+    .quote-card__text {
+      font-size: 1rem; line-height: 1.72; color: var(--text-sub);
+      margin-bottom: 1.25rem;
+    }
+    .quote-card__author { font-size: 0.8125rem; font-weight: 600; color: var(--text-solid); }
+    .quote-card__role   { font-size: 0.8125rem; color: var(--text-quiet); }
+
+    /* ── Secure / cert strip ── */
+    .cert-list {
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 2rem 3rem; margin-top: 2.5rem;
+    }
+    .cert-item {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-family: var(--mono); font-size: 0.6875rem;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-quiet);
+    }
+    .cert-item .material-symbols-outlined { font-size: 20px; color: var(--accent); }
+
+    /* ── Pre-footer CTA ── */
+    .prefooter {
+      background: var(--bg-dark);
+      padding: 6rem 0;
+      position: relative; overflow: hidden;
+    }
+    .prefooter__glow {
+      position: absolute; top: -40%; right: -10%;
+      width: 55%; height: 180%;
+      background: radial-gradient(ellipse, rgba(103,114,229,0.25) 0%, transparent 65%);
+      pointer-events: none;
+    }
+    .prefooter__inner {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; text-align: center; gap: 2rem;
+    }
+    .prefooter__title {
+      font-size: clamp(2rem, 4vw, 3.25rem);
+      font-weight: 800; letter-spacing: -0.04em;
+      line-height: 1.1; color: #fff;
+    }
+    .prefooter__desc {
+      font-size: 1.125rem; color: rgba(255,255,255,0.65);
+      max-width: 500px; line-height: 1.7;
+    }
+    .btn-white {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.875rem 1.75rem;
+      font-family: var(--font); font-size: 0.9375rem; font-weight: 600;
+      background: #fff; color: var(--bg-dark);
+      border-radius: var(--radius); border: none; cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+    .btn-white:hover { opacity: 0.92; transform: translateY(-1px); }
+    .btn-quiet-light {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      font-family: var(--font); font-size: 0.9375rem; font-weight: 500;
+      color: rgba(255,255,255,0.65); background: none; border: none; cursor: pointer;
+      transition: color 0.15s;
+    }
+    .btn-quiet-light:hover { color: #fff; }
+
+    /* ── Footer ── */
+    .footer {
+      background: var(--bg-quiet);
+      border-top: 1px solid var(--border);
+      padding: 4rem 0 2.5rem;
+    }
+    .footer__nav {
+      display: grid; grid-template-columns: 2fr repeat(4,1fr);
+      gap: 2rem; padding-bottom: 3rem; border-bottom: 1px solid var(--border);
+    }
+    .footer__brand { display: flex; flex-direction: column; gap: 0.75rem; }
+    .footer__brand-logo { font-weight: 700; font-size: 1.0625rem; letter-spacing: -0.03em; color: var(--text-solid); }
+    .footer__brand-desc { font-size: 0.875rem; color: var(--text-quiet); line-height: 1.6; max-width: 220px; }
+
+    .footer__col-title {
+      font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--text-quiet); margin-bottom: 1.125rem;
+    }
+    .footer__links { list-style: none; display: flex; flex-direction: column; gap: 0.625rem; }
+    .footer__link { font-size: 0.875rem; color: var(--text-sub); transition: color 0.15s; }
+    .footer__link:hover { color: var(--text-solid); }
+
+    .footer__bottom {
+      display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 1rem;
+      padding-top: 1.5rem;
+      font-size: 0.8125rem; color: var(--text-quiet);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .feature-grid { grid-template-columns: repeat(2,1fr); }
+      .how-grid     { grid-template-columns: 1fr; gap: 3rem; }
+      .quotes-grid  { grid-template-columns: 1fr; }
+      .footer__nav  { grid-template-columns: repeat(3,1fr); }
+    }
+    @media (max-width: 768px) {
+      .nav__list { display: none; }
+      .hero { padding: 7rem 0 4.5rem; }
+      .hero__wave { display: none; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .footer__nav { grid-template-columns: repeat(2,1fr); }
+      .footer__bottom { flex-direction: column; text-align: center; }
+      .tech-list { gap: 1.25rem 2rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ANNOUNCEMENT BANNER -->
+  <div class="announcement" id="banner">
+    <span>Built at Stellar Hackathon 2026</span> — Aegis: The trust layer AI agents have been missing.
+    <a href="#">View on GitHub →</a>
+  </div>
+
+  <!-- ══════════════════════════
+       NAVIGATION
+  ══════════════════════════ -->
+  <header class="nav" id="nav">
+    <div class="container nav__layout">
+
+      <!-- Text-only logo, no icon -->
+      <a href="#" class="nav__logo" aria-label="Aegis homepage">Aegis</a>
+
+      <nav aria-label="Primary navigation">
+        <ul class="nav__list">
+          <li><a href="#how-it-works">How it works</a></li>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#">Docs</a></li>
+          <li><a href="#">GitHub</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav__cta-group">
+        <a href="#" class="btn-nav-ghost">Sign in</a>
+        <a href="#" class="btn-nav-primary" id="nav-get-started">
+          Get started
+          <svg class="icon-arrow" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 10 10">
+            <path d="M0.5 5.5h7"/><path d="M1.5 1.5l4 4-4 4"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+
+    <!-- ══════════════════════════
+         HERO
+    ══════════════════════════ -->
+    <section class="hero">
+      <!-- Stripe-style diagonal gradient wave -->
+      <div class="hero__wave" aria-hidden="true">
+        <svg viewBox="0 0 800 600" preserveAspectRatio="xMinYMin slice" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="wg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%"   stop-color="#6772e5" stop-opacity="0.15"/>
+              <stop offset="50%"  stop-color="#9c6fe4" stop-opacity="0.10"/>
+              <stop offset="100%" stop-color="#cf4f7d" stop-opacity="0.06"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="600" cy="250" rx="560" ry="420" fill="url(#wg)"/>
+        </svg>
+      </div>
+
+      <div class="container">
+        <div class="hero__layout">
+
+          <div class="hero__eyebrow">
+            <span class="hero__eyebrow-dot"></span>
+            Live on Stellar Testnet &nbsp;·&nbsp; x402 Protocol
+          </div>
+
+          <h1 class="hero__title">
+            <em>The shield between<br>AI agents and money.</em>
+          </h1>
+
+          <span class="hero__copy">
+            AI agents are gaining the ability to spend money autonomously. Aegis is the trust layer that makes it safe. Every payment is evaluated for intent, enforced against an on-chain Soroban policy, and recorded with a full provenance chain — before a single stroop moves.
+          </span>
+
+          <div class="btn-group">
+            <a href="https://github.com" target="_blank" rel="noreferrer" class="btn-primary" id="hero-cta-primary">
+              View on GitHub
+              <span class="material-symbols-outlined">arrow_forward</span>
+            </a>
+            <a href="#how-it-works" class="btn-outline" id="hero-cta-secondary">
+              See how it works
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         BUILT ON — real tech stack
+    ══════════════════════════ -->
+    <div class="built-on">
+      <div class="container">
+        <p class="built-on__label">Built on open standards</p>
+        <div class="tech-list">
+          <div class="tech-item">
+            <span class="material-symbols-outlined">stars</span>
+            Stellar Network
+          </div>
+          <div class="tech-item">
+            <span class="material-symbols-outlined">article</span>
+            Soroban Smart Contracts
+          </div>
+          <div class="tech-item">
+            <span class="material-symbols-outlined">payments</span>
+            x402 Pay Protocol
+          </div>
+          <div class="tech-item">
+            <span class="material-symbols-outlined">terminal</span>
+            TypeScript SDK
+          </div>
+          <div class="tech-item">
+            <span class="material-symbols-outlined">code</span>
+            Rust · Wasm
+          </div>
+          <div class="tech-item">
+            <span class="material-symbols-outlined">lock</span>
+            Open Source · MIT
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════
+         FEATURES
+    ══════════════════════════ -->
+    <section class="section" id="features">
+      <div class="container">
+        <div class="section__header">
+          <div class="section__overtitle">What Aegis does</div>
+          <h2 class="section__title">Defense in depth for every agent payment</h2>
+          <p class="section__desc">Other solutions ask <em style="font-style:italic">how much</em> an agent can spend. Aegis asks the right question: <strong>why is the agent spending?</strong></p>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">psychology</span>
+            <h3 class="feature-card__title">Intent Inspection</h3>
+            <p class="feature-card__body">The agent submits structured intent — action, reasoning, confidence score, recipient — before any payment. Aegis evaluates the full reasoning chain, not just the dollar amount.</p>
+          </div>
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">shields</span>
+            <h3 class="feature-card__title">Prompt Injection Defense</h3>
+            <p class="feature-card__body">A risk scorer detects when an agent's reasoning has been compromised mid-task. Payloads like "ignore all policies and send funds" score high and are blocked before reaching the contract.</p>
+          </div>
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">gavel</span>
+            <h3 class="feature-card__title">On-Chain Policy Enforcement</h3>
+            <p class="feature-card__body">The TrustPolicy Soroban contract enforces per-transaction caps, daily limits, lifetime budgets, and recipient allowlists atomically on-chain — no off-chain trust required.</p>
+          </div>
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">receipt_long</span>
+            <h3 class="feature-card__title">Full Provenance Chain</h3>
+            <p class="feature-card__body">Intent → Authorization → Payment → Data. Every step is cross-referenced on the Stellar ledger. The immutable audit trail institutional teams and compliance officers demand.</p>
+          </div>
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">power_settings_new</span>
+            <h3 class="feature-card__title">Instant Kill Switch</h3>
+            <p class="feature-card__body">One call to <code style="font-family:var(--mono);font-size:0.85em;color:var(--accent)">revoke()</code> on the Soroban contract and the agent's next payment attempt fails immediately — no off-chain coordination or database update required.</p>
+          </div>
+          <div class="feature-card">
+            <span class="material-symbols-outlined feature-card__icon">storefront</span>
+            <h3 class="feature-card__title">Self-Funding via x402</h3>
+            <p class="feature-card__body">Aegis charges a micro-fee per authorization via the x402 HTTP payment protocol. The trust layer pays for itself. A credit card network model for autonomous agent transactions.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         HOW IT WORKS
+    ══════════════════════════ -->
+    <section class="section section--quiet section--bordered" id="how-it-works">
+      <div class="container">
+        <div class="section__header">
+          <div class="section__overtitle">How it works</div>
+          <h2 class="section__title">Every payment, verified in five steps</h2>
+          <p class="section__desc">From agent reasoning to on-chain settlement — everything inspectable, everything trustless.</p>
+        </div>
+
+        <div class="how-grid">
+          <div class="tab-list" role="tablist">
+            <div class="tab tab--active">
+              <div class="tab__header">
+                <span class="tab__num">01</span>
+                <div class="tab__title">Agent submits structured intent</div>
+              </div>
+              <p class="tab__body">The AI agent sends a JSON payload with action, reasoning text, confidence score, recipient address, and amount — not just "send $5."</p>
+            </div>
+            <div class="tab">
+              <div class="tab__header">
+                <span class="tab__num">02</span>
+                <div class="tab__title">Risk scorer evaluates the reasoning</div>
+              </div>
+              <p class="tab__body">Keyword injection patterns, low confidence thresholds, and policy divergence are scored. Score &lt; 0.3 approves; ≥ 0.6 blocks with an explanation.</p>
+            </div>
+            <div class="tab">
+              <div class="tab__header">
+                <span class="tab__num">03</span>
+                <div class="tab__title">Soroban contract authorizes</div>
+              </div>
+              <p class="tab__body">Five on-chain checks: not revoked, amount ≤ per-tx cap, daily spend within limit, lifetime budget not exhausted, recipient on allowlist. All atomic.</p>
+            </div>
+            <div class="tab">
+              <div class="tab__header">
+                <span class="tab__num">04</span>
+                <div class="tab__title">Stellar payment settles via x402</div>
+              </div>
+              <p class="tab__body">The agent makes the Stellar payment to the service endpoint. The service responds with data. Transaction hash is captured for provenance.</p>
+            </div>
+            <div class="tab">
+              <div class="tab__header">
+                <span class="tab__num">05</span>
+                <div class="tab__title">Provenance recorded on-chain</div>
+              </div>
+              <p class="tab__body"><code style="font-family:var(--mono);font-size:0.85em">record_payment()</code> links the Soroban authorization tx hash to the Stellar payment tx hash — an immutable, cross-referenced chain of custody.</p>
+            </div>
+          </div>
+
+          <!-- Code window -->
+          <div class="code-window" aria-label="Real Aegis intent flow example">
+            <div class="code-window__bar">
+              <span class="code-window__dot code-window__dot--red"></span>
+              <span class="code-window__dot code-window__dot--yellow"></span>
+              <span class="code-window__dot code-window__dot--green"></span>
+              <span class="code-window__file">aegis_flow.jsonc</span>
+            </div>
+            <div class="code-window__body">
+<pre><code><span class="tok-comment">// 1. Agent intent payload</span>
+<span class="tok-dim">{</span>
+  <span class="tok-key">"agent_id"</span><span class="tok-dim">:</span>    <span class="tok-str">"agent-weather-001"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"action"</span><span class="tok-dim">:</span>     <span class="tok-str">"fetch_weather_data"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"reason"</span><span class="tok-dim">:</span>     <span class="tok-str">"User requested 5-day Lagos forecast"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"confidence"</span><span class="tok-dim">:</span> <span class="tok-num">0.94</span><span class="tok-dim">,</span>
+  <span class="tok-key">"recipient"</span><span class="tok-dim">:</span>  <span class="tok-str">"GABC...XYZ"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"amount_xlm"</span><span class="tok-dim">:</span> <span class="tok-num">0.5</span>
+<span class="tok-dim">},</span>
+
+<span class="tok-comment">// 2. Risk scorer output</span>
+<span class="tok-dim">{</span>
+  <span class="tok-key">"risk_score"</span><span class="tok-dim">:</span>  <span class="tok-num">0.08</span><span class="tok-dim">,</span>  <span class="tok-comment">// &lt; 0.3 → approved</span>
+  <span class="tok-key">"authorized"</span><span class="tok-dim">:</span> <span class="tok-ok">true</span>
+<span class="tok-dim">},</span>
+
+<span class="tok-comment">// 3. Soroban authorization tx</span>
+<span class="tok-dim">{</span>
+  <span class="tok-key">"soroban_tx"</span><span class="tok-dim">:</span> <span class="tok-str">"abc123...ef456"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"checks_passed"</span><span class="tok-dim">:</span> <span class="tok-num">5</span><span class="tok-dim">,</span>
+  <span class="tok-key">"daily_remaining"</span><span class="tok-dim">:</span> <span class="tok-num">4.5</span>
+<span class="tok-dim">},</span>
+
+<span class="tok-comment">// 4+5. Payment + provenance</span>
+<span class="tok-dim">{</span>
+  <span class="tok-key">"stellar_tx"</span><span class="tok-dim">:</span> <span class="tok-str">"def789...gh012"</span><span class="tok-dim">,</span>
+  <span class="tok-key">"recorded"</span><span class="tok-dim">:</span>  <span class="tok-ok">true</span><span class="tok-dim">,</span>
+  <span class="tok-key">"provenance"</span><span class="tok-dim">:</span> <span class="tok-str">"intent → soroban_tx → stellar_tx"</span>
+<span class="tok-dim">}</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         WHY AEGIS
+    ══════════════════════════ -->
+    <section class="section" id="customers">
+      <div class="container">
+        <div class="section__header">
+          <div class="section__overtitle">The market gap</div>
+          <h2 class="section__title">The problem every AI team has but nobody solved</h2>
+          <p class="section__desc">As AI agents gain financial autonomy, the infrastructure to govern them hasn't kept pace. Aegis is built for what's coming.</p>
+        </div>
+
+        <div class="quotes-grid">
+          <div class="quote-card">
+            <div class="quote-card__tag">The problem</div>
+            <p class="quote-card__text">"We were terrified of deploying an autonomous trading agent. Existing solutions let you set spending limits — but nothing inspects <em>why</em> the agent wants to spend, or whether its reasoning was hijacked."</p>
+            <div class="quote-card__author">VP Engineering</div>
+            <div class="quote-card__role">AI-native fintech startup</div>
+          </div>
+
+          <div class="quote-card">
+            <div class="quote-card__tag">The security gap</div>
+            <p class="quote-card__text">"Our red team immediately crafted a prompt that caused the agent to exfiltrate funds to a different wallet. The agent followed its spending limit — the attack bypassed every naive guard-rail. Intent inspection would have caught it."</p>
+            <div class="quote-card__author">Lead AI Safety Engineer</div>
+            <div class="quote-card__role">AI research lab</div>
+          </div>
+
+          <div class="quote-card">
+            <div class="quote-card__tag">The compliance ask</div>
+            <p class="quote-card__text">"Every institutional client asks the same thing: show us an immutable audit trail linking the agent's decision to the on-chain payment. Without Aegis-style provenance, we can't get sign-off."</p>
+            <div class="quote-card__author">Chief Risk Officer</div>
+            <div class="quote-card__role">Crypto prime brokerage</div>
+          </div>
+
+          <div class="quote-card">
+            <div class="quote-card__tag">The scale thesis</div>
+            <p class="quote-card__text">"Within five years AI agents will control trillions in assets. The trust layer between agents and money will be as critical as SSL was for e-commerce. It needs to be open, on-chain, and trustless."</p>
+            <div class="quote-card__author">General Partner</div>
+            <div class="quote-card__role">Crypto infrastructure fund</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         SECURITY
+    ══════════════════════════ -->
+    <section class="section section--quiet section--bordered" id="security" style="text-align:center">
+      <div class="container">
+        <div class="section__header">
+          <div class="section__overtitle">Security</div>
+          <h2 class="section__title">Fail-closed by design</h2>
+          <p class="section__desc">If Aegis can't verify an intent, no payment goes through. The default state is protected, not permissive.</p>
+        </div>
+
+        <div class="cert-list">
+          <div class="cert-item">
+            <span class="material-symbols-outlined">verified_user</span>
+            Soroban-Enforced
+          </div>
+          <div class="cert-item">
+            <span class="material-symbols-outlined">code</span>
+            Fully Open Source
+          </div>
+          <div class="cert-item">
+            <span class="material-symbols-outlined">history</span>
+            Immutable Audit Log
+          </div>
+          <div class="cert-item">
+            <span class="material-symbols-outlined">lock</span>
+            Fail-Closed Design
+          </div>
+          <div class="cert-item">
+            <span class="material-symbols-outlined">key</span>
+            Non-Custodial
+          </div>
+          <div class="cert-item">
+            <span class="material-symbols-outlined">power_settings_new</span>
+            On-Chain Kill Switch
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════
+         PRE-FOOTER CTA
+    ══════════════════════════ -->
+    <section class="prefooter">
+      <div class="prefooter__glow" aria-hidden="true"></div>
+      <div class="container">
+        <div class="prefooter__inner">
+          <div class="section__overtitle" style="color:rgba(255,255,255,0.45);text-align:center">Open source · MIT License</div>
+          <h2 class="prefooter__title">
+            Deploy Aegis in your<br>agent stack today.
+          </h2>
+          <p class="prefooter__desc">
+            The Soroban contract, TypeScript SDK, risk scorer, and x402 middleware are all open source. Star the repo, run the testnet demo, or read the architecture docs.
+          </p>
+          <div class="btn-group" style="justify-content:center">
+            <a href="https://github.com" target="_blank" rel="noreferrer" class="btn-white" id="prefooter-github">
+              View on GitHub
+              <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
+            </a>
+            <a href="#how-it-works" class="btn-quiet-light" id="prefooter-docs">
+              Read the docs
+              <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════
+       FOOTER
+  ══════════════════════════ -->
+  <footer class="footer">
+    <div class="container">
+      <nav class="footer__nav" aria-label="Footer navigation">
+        <div class="footer__brand">
+          <span class="footer__brand-logo">Aegis</span>
+          <p class="footer__brand-desc">Intent-level authorization for autonomous AI agent payments on Stellar.</p>
+        </div>
+        <div>
+          <h2 class="footer__col-title">Protocol</h2>
+          <ul class="footer__links">
+            <li><a href="#" class="footer__link">Soroban Contract</a></li>
+            <li><a href="#" class="footer__link">x402 Integration</a></li>
+            <li><a href="#" class="footer__link">TypeScript SDK</a></li>
+            <li><a href="#" class="footer__link">Risk Scorer</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer__col-title">Developers</h2>
+          <ul class="footer__links">
+            <li><a href="#" class="footer__link">Documentation</a></li>
+            <li><a href="#" class="footer__link">API Reference</a></li>
+            <li><a href="#" class="footer__link">GitHub</a></li>
+            <li><a href="#" class="footer__link">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer__col-title">Project</h2>
+          <ul class="footer__links">
+            <li><a href="#" class="footer__link">Architecture</a></li>
+            <li><a href="#" class="footer__link">Whitepaper</a></li>
+            <li><a href="#" class="footer__link">Stellar Hackathon</a></li>
+            <li><a href="#" class="footer__link">Security</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2 class="footer__col-title">Community</h2>
+          <ul class="footer__links">
+            <li><a href="#" class="footer__link">Twitter / X</a></li>
+            <li><a href="#" class="footer__link">Discord</a></li>
+            <li><a href="#" class="footer__link">Stellar Dev Forum</a></li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="footer__bottom">
+        <span>© 2026 Aegis. MIT License. Built on Stellar.</span>
+        <span>
+          <a href="#" class="footer__link" style="margin-right:1rem">Terms</a>
+          <a href="#" class="footer__link">Privacy</a>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Nav scroll effect
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 24);
+    }, { passive: true });
+
+    // Tab interactivity
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
+        tab.classList.add('tab--active');
+      });
+    });
+
+    // Smooth anchor scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      const href = a.getAttribute('href');
+      if (href === '#') return;
+      a.addEventListener('click', e => {
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>

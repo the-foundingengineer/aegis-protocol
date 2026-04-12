@@ -1,0 +1,28 @@
+{
+  "name": "service-b",
+  "version": "1.0.0",
+  "description": "AgentGuard Mock Risk Signal Service (x402)",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^15.0.1",
+    "@x402/express": "^2.9.0",
+    "@x402/core": "^2.9.0",
+    "@x402/stellar": "^2.9.0",
+    "cors": "^2.8.6",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
