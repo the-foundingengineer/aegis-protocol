@@ -81,7 +81,7 @@ function TransactionFeed({ events }: { events: AgentEvent[] }) {
   return (
     <div style={{ marginTop: 16 }}>
       <div className="card-title">
-        <MI icon="timeline" /> LIVE ACTIVITY
+        <MI icon="timeline" /> ACTIVITY
         <span style={{
           marginLeft: 8, fontSize: 11, fontWeight: 500,
           background: 'var(--bg-color)',
@@ -331,7 +331,6 @@ const App: React.FC = () => {
 
       {/* Status Banner */}
       <div className={`status-banner ${policy.revoked ? 'revoked' : 'active'}`}>
-        <div className={`status-dot ${policy.revoked ? 'revoked' : 'active'}`} />
         <span className={`status-text ${policy.revoked ? 'revoked' : 'active'}`}>
           {policy.revoked ? 'Agent Revoked' : 'Agent Active'}
         </span>
