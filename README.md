@@ -21,6 +21,14 @@ Aegis implements the **x402 Payment Protocol** to bridge the gap between AI inte
 -   📜 **Immutable Audit Trail**: Every payment record is permanently logged as a Soroban event for forensic trust.
 -   💎 **Stellar/USDC Native**: Built on the world's most efficient payment network.
 
+## 🗺 Roadmap: Aegis Prime
+
+We are moving from a reactive firewall to a **proactive Intent-Execution Layer**.
+
+1.  **Phase 1: EIP-7702 Delegation**: Utilizing "Set Code" transactions to delegate agent execution to Aegis-controlled semantics with zero deployment cost.
+2.  **Phase 2: Verifiable Intent-Execution Bridge (VIEB)**: Moving the agent's reasoning engine into **Hardware-Attested TEEs** (Confidential VMs) using the Dstack/Kettle architecture. This ensures that agent keys and "brains" are inaccessible even to host operators.
+3.  **Phase 3: MEV Internalization**: Integrating with **SUAVE** and shared sequencers to protect agents from front-running and return extracted value back to the agentic ecosystem.
+
 ## 🚀 Getting Started
 
 ### Prerequisites
