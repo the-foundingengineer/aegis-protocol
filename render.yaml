@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: aegis-policy-node
+    env: node
+    rootDir: agent-guard/backend
+    buildCommand: npm install
+    startCommand: npx tsx src/index.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CONTRACT_ID
+        sync: false
+      - key: OWNER_SECRET
+        sync: false
+      - key: RPC_URL
+        value: https://soroban-testnet.stellar.org

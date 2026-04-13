@@ -17,9 +17,9 @@ const MI = ({ icon, size = 16 }: { icon: string; size?: number }) => (
   </span>
 );
 
-const BACKEND_URL = `http://${window.location.hostname}:3001`;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || `http://${window.location.hostname}:3001`;
 // Agent URL isn't used for the current demo script, but keeping it dynamic just in case
-const AGENT_URL = `http://${window.location.hostname}:4003`;
+const AGENT_URL = import.meta.env.VITE_AGENT_URL || `http://${window.location.hostname}:4003`;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
