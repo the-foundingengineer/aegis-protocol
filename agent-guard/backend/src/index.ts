@@ -19,6 +19,10 @@ import {
 
 dotenv.config();
 
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -155,10 +159,15 @@ app.post('/authorize', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'recipient and positive amount required' });
   }
 
-  const args = [
-    new Address(recipient).toScVal(),
-    nativeToScVal(BigInt(Math.round(amount)), { type: 'i128' }),
-  ];
+  let args;
+  try {
+    args = [
+      new Address(recipient).toScVal(),
+      nativeToScVal(BigInt(Math.round(amount)), { type: 'i128' }),
+    ];
+  } catch (e: any) {
+    return res.status(400).json({ error: 'Invalid recipient address format' });
+  }
 
   const result = await invokeContract('authorize', args);
 
@@ -281,9 +290,20 @@ app.get('/events', async (_req: Request, res: Response) => {
   }
 });
 
+// POST /run-demo — launches the local demo shell script (hackathon integration)
+app.post('/run-demo', async (_req: Request, res: Response) => {
+  try {
+    const { exec } = await import('child_process');
+    exec('pkill -f demo_script.sh; /tmp/demo_script.sh > /tmp/demo_agent.log 2>&1 &');
+    res.json({ success: true, message: 'Demo sequence started' });
+  } catch (e: any) {
+    res.status(500).json({ error: 'Failed to start demo script' });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`TrustLayer backend running on port ${PORT}`);
+app.listen(PORT as number, '0.0.0.0', () => {
+  console.log(`TrustLayer backend running on port ${PORT} (0.0.0.0)`);
   console.log(`Contract: ${contractId}`);
   console.log(`Owner: ${ownerKeypair.publicKey()}`);
 });

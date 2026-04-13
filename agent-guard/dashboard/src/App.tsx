@@ -17,8 +17,9 @@ const MI = ({ icon, size = 16 }: { icon: string; size?: number }) => (
   </span>
 );
 
-const BACKEND_URL = 'http://localhost:3001';
-const AGENT_URL = 'http://localhost:4003';
+const BACKEND_URL = `http://${window.location.hostname}:3001`;
+// Agent URL isn't used for the current demo script, but keeping it dynamic just in case
+const AGENT_URL = `http://${window.location.hostname}:4003`;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,10 +247,36 @@ const App: React.FC = () => {
 
   const refreshEvents = useCallback(async () => {
     try {
-      const res = await axios.get(`${AGENT_URL}/events`);
-      setAgentEvents(res.data.events || []);
+      // Fetch Soroban events directly from the backend now
+      const res = await axios.get(`${BACKEND_URL}/events`);
+
+      // Parse the events to match the UI's expected format
+      const formattedEvents = (res.data.events || []).map((e: any) => {
+        let recipient, amountXlm, reason;
+
+        if (Array.isArray(e.value)) {
+          recipient = typeof e.value[0] === 'string' ? e.value[0] : (e.value[0]?.address || e.value[0]);
+          amountXlm = typeof e.value[1] === 'string' || typeof e.value[1] === 'number' || typeof e.value[1] === 'bigint' ? (Number(e.value[1]) / 10000000).toFixed(2) : undefined;
+          reason = e.value[2]?.symbol || e.value[2];
+        } else {
+          recipient = e.value?.address;
+          amountXlm = e.value?.i128 ? (Number(e.value.i128) / 10000000).toFixed(2) : undefined;
+        }
+
+        return {
+          id: e.id,
+          timestamp: e.ledgerClosedAt || new Date().toISOString(),
+          type: e.type === 'intent' ? (e.subtype === 'approved' ? 'trust_approved' : 'trust_blocked') :
+            (e.type === 'revoke' ? 'error' : 'task_complete'),
+          recipient: recipient,
+          amountXlm: amountXlm,
+          reason: reason,
+          txHash: e.txHash,
+        };
+      });
+      setAgentEvents(formattedEvents);
     } catch {
-      // Agent might not be running yet
+      // Backend might be warming up
     }
   }, []);
 
@@ -295,8 +322,8 @@ const App: React.FC = () => {
 
   const handleRunAgent = async () => {
     try {
-      await axios.post(`${AGENT_URL}/clear`);
-      await axios.post(`${AGENT_URL}/run`, { task });
+      setAgentEvents([]); // Clear ui instantly
+      await axios.post(`${BACKEND_URL}/run-demo`);
       setTimeout(refreshEvents, 1000);
     } catch (e: any) {
       console.error('Failed to run agent:', e);
@@ -323,7 +350,7 @@ const App: React.FC = () => {
           <span className="logo-sub">Stellar Testnet</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary" onClick={() => { axios.post(`${AGENT_URL}/clear`); setAgentEvents([]); }}>
+          <button className="btn btn-secondary" onClick={() => setAgentEvents([])}>
             <MI icon="delete_sweep" size={15} />&nbsp;Clear Log
           </button>
         </div>
