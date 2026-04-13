@@ -33,6 +33,12 @@ Thumbs.db
 
 # Rust
 agent-guard/contracts/*/target/
-
-# Test artifacts
-coverage/
+# Local Reference Files (Kept out of Git)
+/scale.html
+/stripe.html
+/supabase.html
+/vercel.html
+engineer1_prompts.md
+engineer2_prompts.md
+founding_engineer_analysis.md.resolved
+the_10x_moat.md.resolved
