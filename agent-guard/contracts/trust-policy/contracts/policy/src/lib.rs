@@ -81,6 +81,7 @@ impl TrustPolicyContract {
 
     /// Primary authorization gate. Called by the agent before every payment.
     /// Returns Ok(true) if payment is authorized, Ok(false) if blocked by policy.
+    /// Emits a structured event with the block reason when returning false.
     pub fn authorize(
         env: Env,
         recipient: Address,
@@ -100,8 +101,8 @@ impl TrustPolicyContract {
             env.storage().instance().set(&DataKey::LastReset, &now);
         }
 
-        // ── Policy checks ──────────────────────────────────────────────────
-        
+        // ── Policy checks (ordered by cheapest-to-check first) ─────────────
+
         let revoked: bool = env.storage().instance().get(&DataKey::Revoked).unwrap();
         if revoked {
             Self::emit_blocked(&env, &recipient, amount, symbol_short!("revoked"));
@@ -134,16 +135,45 @@ impl TrustPolicyContract {
             return Ok(false);
         }
 
-        // ── All checks passed ──────────────────────────────────────────────
+        // ── All checks passed — update state atomically ────────────────────
         env.storage().instance().set(&DataKey::SpentToday, &spent_today.saturating_add(amount));
         env.storage().instance().set(&DataKey::SpentTotal, &spent_total.saturating_add(amount));
 
         env.events().publish(
-            (symbol_short!("auth"), symbol_short!("ok")),
-            (recipient, amount),
+            (symbol_short!("intent"), symbol_short!("approved")),
+            (recipient.clone(), amount),
         );
 
         Ok(true)
+    }
+
+    /// Rolls back a previously authorized but un-executed payment.
+    /// Called by the Aegis Policy Node if the downstream payment fails.
+    /// This prevents budget desync when a signed payment transaction fails to land.
+    pub fn cancel_authorization(
+        env: Env,
+        amount: i128,
+    ) -> Result<(), TrustError> {
+        Self::assert_initialized(&env)?;
+        Self::get_owner(&env).require_auth();
+
+        if amount <= 0 {
+            return Err(TrustError::InvalidAmount);
+        }
+
+        let spent_today: i128 = env.storage().instance().get(&DataKey::SpentToday).unwrap();
+        let spent_total: i128 = env.storage().instance().get(&DataKey::SpentTotal).unwrap();
+
+        // Saturating sub prevents underflow — cannot go below 0
+        env.storage().instance().set(&DataKey::SpentToday, &spent_today.saturating_sub(amount));
+        env.storage().instance().set(&DataKey::SpentTotal, &spent_total.saturating_sub(amount));
+
+        env.events().publish(
+            (symbol_short!("intent"), symbol_short!("cancel")),
+            (amount,),
+        );
+
+        Ok(())
     }
 
     /// Records a confirmed payment hash for an immutable audit trail.

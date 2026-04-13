@@ -694,10 +694,10 @@
           "v0": {
             "topics": [
               {
-                "symbol": "auth"
+                "symbol": "intent"
               },
               {
-                "symbol": "ok"
+                "symbol": "approved"
               }
             ],
             "data": {

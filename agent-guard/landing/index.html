@@ -211,7 +211,20 @@
     }
     .hero__wave svg { width: 100%; height: 100%; }
 
-    .hero__layout { position: relative; z-index: 1; max-width: 720px; }
+    /* Architecture illustration in the hero */
+    .hero__illustration {
+      position: absolute;
+      top: 50%; right: 4rem;
+      transform: translateY(-50%);
+      width: clamp(280px, 34vw, 480px);
+      z-index: 1;
+      pointer-events: none;
+      border-radius: 12px;
+      opacity: 0.92;
+      filter: drop-shadow(0 32px 64px rgba(10,37,64,0.12));
+    }
+
+    .hero__layout { position: relative; z-index: 1; max-width: 580px; }
 
     /* Stripe eyebrow (their "Global GDP" live stat style) */
     .hero__eyebrow {
@@ -672,7 +685,7 @@
         <div class="hero__layout">
 
           <div class="hero__eyebrow">
-            x402 Protocol Implementation
+            The Verifiable Intent Layer for Autonomous Agent Commerce
           </div>
 
           <h1 class="hero__title">
@@ -684,7 +697,7 @@
           </span>
 
           <div class="btn-group">
-            <a href="https://github.com" target="_blank" rel="noreferrer" class="btn-primary" id="hero-cta-primary">
+            <a href="https://github.com/the-foundingengineer/aegis-protocol" target="_blank" rel="noreferrer" class="btn-primary" id="hero-cta-primary">
               View on GitHub
               <span class="material-symbols-outlined">arrow_forward</span>
             </a>
@@ -694,6 +707,10 @@
           </div>
 
         </div>
+
+        <!-- Architecture illustration -->
+        <img src="aegis_shield.png" alt="Aegis architecture: AI Agent → Shield → Stellar Blockchain" class="hero__illustration" />
+
       </div>
     </section>
 
