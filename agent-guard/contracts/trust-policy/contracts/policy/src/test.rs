@@ -1,7 +1,7 @@
 #![cfg(test)]
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Events, Ledger, LedgerInfo},
+    testutils::{Address as _, Ledger, LedgerInfo},
     Address, Env, Vec,
 };
 
@@ -14,69 +14,197 @@ fn setup_env() -> (Env, Address, TrustPolicyContractClient<'static>) {
     (env, owner, client)
 }
 
+fn default_allowlist(env: &Env, recipients: &[Address]) -> Vec<Address> {
+    let mut list = Vec::new(env);
+    for r in recipients {
+        list.push_back(r.clone());
+    }
+    list
+}
+
+// ── Initialization tests ──────────────────────────────────────────────────────
+
 #[test]
-fn test_full_lifecycle() {
+fn test_initialize_success() {
     let (env, owner, client) = setup_env();
     let recipient = Address::generate(&env);
-    let mut allowlist = Vec::new(&env);
-    allowlist.push_back(recipient.clone());
+    let allowlist = default_allowlist(&env, &[recipient]);
 
-    // Initialize: per_tx=5, daily=20, total=20
-    client.initialize(&owner, &5, &20, &20, &allowlist);
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
 
-    // 1. Valid payment
-    assert!(client.authorize(&recipient, &3)); // Total 3
+    let (stored_owner, per_tx, daily, total, spent_today, spent_total, revoked)
+        = client.get_policy();
 
-    // 2. Exceed per_tx
-    assert!(!client.authorize(&recipient, &6));
+    assert_eq!(stored_owner, owner);
+    assert_eq!(per_tx, 5_000_000);
+    assert_eq!(daily, 20_000_000);
+    assert_eq!(total, 100_000_000);
+    assert_eq!(spent_today, 0);
+    assert_eq!(spent_total, 0);
+    assert!(!revoked);
+}
 
-    // 3. Check daily reset
-    assert!(client.authorize(&recipient, &5)); // Total 8, Today 8
-    
+#[test]
+#[should_panic]
+fn test_initialize_twice_panics() {
+    let (env, owner, client) = setup_env();
+    let allowlist = Vec::new(&env);
+    client.initialize(&owner, &1_000_000, &10_000_000, &100_000_000, &allowlist);
+    client.initialize(&owner, &1_000_000, &10_000_000, &100_000_000, &allowlist);
+}
+
+// ── authorize() tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn test_authorize_passes_under_all_caps() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
+
+    let result = client.authorize(&recipient, &3_000_000);
+    assert!(result);
+}
+
+#[test]
+fn test_authorize_blocked_by_per_tx_cap() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
+
+    // Request 6 USDC — over per_tx cap of 5
+    let result = client.authorize(&recipient, &6_000_000);
+    assert!(!result);
+}
+
+#[test]
+fn test_authorize_blocked_by_daily_cap() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    // per_tx=5, daily=8, total=100
+    client.initialize(&owner, &5_000_000, &8_000_000, &100_000_000, &allowlist);
+
+    // First payment: 5 USDC — ok
+    assert!(client.authorize(&recipient, &5_000_000));
+    // Second payment: 5 USDC — would bring daily to 10, over cap of 8
+    assert!(!client.authorize(&recipient, &5_000_000));
+}
+
+#[test]
+fn test_authorize_blocked_by_total_budget() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    // per_tx=5, daily=20, total=7
+    client.initialize(&owner, &5_000_000, &20_000_000, &7_000_000, &allowlist);
+
+    assert!(client.authorize(&recipient, &5_000_000));
+    // Next payment would bring total to 10, over budget of 7
+    assert!(!client.authorize(&recipient, &5_000_000));
+}
+
+#[test]
+fn test_authorize_blocked_recipient_not_in_allowlist() {
+    let (env, owner, client) = setup_env();
+    let allowed = Address::generate(&env);
+    let stranger = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[allowed]);
+
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
+
+    let result = client.authorize(&stranger, &1_000_000);
+    assert!(!result);
+}
+
+// ── revoke/resume tests ───────────────────────────────────────────────────────
+
+#[test]
+fn test_authorize_blocked_by_revoke() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
+
+    // Confirm payment works before revoke
+    assert!(client.authorize(&recipient, &1_000_000));
+
+    // Revoke
+    client.revoke();
+
+    // Now authorize must return false
+    assert!(!client.authorize(&recipient, &1_000_000));
+}
+
+#[test]
+fn test_resume_re_enables_after_revoke() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
+    client.revoke();
+    assert!(!client.authorize(&recipient, &1_000_000));
+
+    client.resume();
+    assert!(client.authorize(&recipient, &1_000_000));
+}
+
+// ── Daily reset test ──────────────────────────────────────────────────────────
+
+#[test]
+fn test_daily_reset_after_24h() {
+    let (env, owner, client) = setup_env();
+    let recipient = Address::generate(&env);
+    let allowlist = default_allowlist(&env, &[recipient.clone()]);
+
+    // daily=8
+    client.initialize(&owner, &5_000_000, &8_000_000, &100_000_000, &allowlist);
+
+    assert!(client.authorize(&recipient, &5_000_000));
+    assert!(!client.authorize(&recipient, &5_000_000));
+
     // Advance ledger time by 25 hours
     env.ledger().set(LedgerInfo {
-        timestamp: 90_000, 
+        timestamp: env.ledger().timestamp() + 90_000, // 25h in seconds
         protocol_version: 20,
-        sequence_number: 100,
+        sequence_number: env.ledger().sequence() + 100,
         network_id: Default::default(),
         base_reserve: 10,
         min_temp_entry_ttl: 1,
         min_persistent_entry_ttl: 1,
         max_entry_ttl: 1000,
     });
-    
-    assert!(client.authorize(&recipient, &5)); // Total 13, Today 5. Reset works!
 
-    // 4. Exceed total budget
-    assert!(client.authorize(&recipient, &5)); // Total 18, Today 10
-    assert!(!client.authorize(&recipient, &5)); // 18 + 5 = 23 > 20 (BLOCKED)
-
-    // 5. Revoke / Resume
-    client.revoke();
-    assert!(!client.authorize(&recipient, &1)); // Blocked by revoke
-    client.resume();
-    assert!(client.authorize(&recipient, &1)); // Total 19, Today 11 (PASS)
-
-    // 6. Hit total budget exactly
-    assert!(client.authorize(&recipient, &1)); // Total 20, Today 12 (PASS)
-    assert!(!client.authorize(&recipient, &1)); // Total 21 > 20 (BLOCKED)
+    // After reset, daily spend should be 0 again
+    assert!(client.authorize(&recipient, &5_000_000));
 }
 
+// ── Allowlist management tests ────────────────────────────────────────────────
+
 #[test]
-fn test_allowlist_management() {
+fn test_add_remove_allowlist() {
     let (env, owner, client) = setup_env();
     let r1 = Address::generate(&env);
     let r2 = Address::generate(&env);
-    client.initialize(&owner, &100, &1000, &10000, &Vec::new(&env));
+    let allowlist = default_allowlist(&env, &[r1.clone()]);
 
-    assert!(!client.authorize(&r1, &1));
-    client.add_to_allowlist(&r1);
-    assert!(client.authorize(&r1, &1));
+    client.initialize(&owner, &5_000_000, &20_000_000, &100_000_000, &allowlist);
 
+    // r2 is not allowed yet
+    assert!(!client.authorize(&r2, &1_000_000));
+
+    // Add r2
     client.add_to_allowlist(&r2);
-    assert!(client.authorize(&r2, &1));
+    assert!(client.authorize(&r2, &1_000_000));
 
-    client.remove_from_allowlist(&r1);
-    assert!(!client.authorize(&r1, &1));
-    assert!(client.authorize(&r2, &1));
+    // Remove r2
+    client.remove_from_allowlist(&r2);
+    assert!(!client.authorize(&r2, &1_000_000));
 }

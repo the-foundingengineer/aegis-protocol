@@ -492,3 +492,16 @@ nohup: ignoring input
 [0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
 [0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
 [0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] [TrustPolicy Contract] ⚠️ Policy Query By-passed (No Contract). Returning Mock Policy!
+[0] npm run backend:dev exited with code SIGHUP
+[2] npm run services-b:dev exited with code SIGHUP
+[1] npm run services-a:dev exited with code SIGHUP
+[4] npm run dashboard:dev exited with code SIGHUP
